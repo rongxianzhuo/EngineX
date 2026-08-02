@@ -11,13 +11,16 @@ namespace EngineX.Baseline.FixedPoint
         public const int FractionBit = 32;
         public const long FractionBitPow2 = 1L << FractionBit;
 
-        public static readonly FP PI = new FP(13493038080);
+        public static readonly FP PI = new FP(13493037705L);
+
+        public static readonly FP Deg2Rad = new FP(74961321L);
+
+        public static readonly FP Rad2Deg = new FP(246083499208L);
+
         public static readonly FP Zero = default;
         public static readonly FP Epsilon = new FP(1L);
         public static readonly FP One = new FP(1L << FractionBit);
         public static readonly FP MaxValue = new FP(0x7FFFFFFFFFFFFFFFL);
-        public static readonly FP Deg2Rad = PI / 180;
-        public static readonly FP Rad2Deg = 180 / PI;
 
         public readonly long RawData;
 
@@ -30,33 +33,37 @@ namespace EngineX.Baseline.FixedPoint
         {
             get
             {
-                if (this <= 0) return Zero;
-                var l = Epsilon;
-                var r = this;
-                while (r - l > Epsilon)
+                if (RawData < 0)
+                    throw new ArgumentOutOfRangeException(nameof(RawData),
+                        "Cannot take sqrt of a negative FP value.");
+                if (RawData == 0) return Zero;
+                var raw = RawData;
+                var h = 63;
+                while (h >= 0 && (raw & (1L << h)) == 0) h--;
+                var guessBit = (h + 32) >> 1;
+                if (guessBit < 1) guessBit = 1;
+                if (guessBit > 62) guessBit = 62;
+                var x = 1L << (int)guessBit;
+                for (var i = 0; i < 5; i++)
                 {
-                    var m = (l + r) >> 1;
-                    var m2 = m * m;
-                    if (m2 == this) return m;
-                    if (m2 > this) r = m;
-                    else l = m;
+                    x = (x + (this / FP.FromRawData(x)).RawData) >> 1;
                 }
-                return l;
+                return FP.FromRawData(x);
             }
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public FP Abs()
         {
             return RawData < 0 ? -this : this;
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Sign()
         {
             return RawData < 0 ? -1 : 1;
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Equals(FP other)
         {
@@ -105,14 +112,14 @@ namespace EngineX.Baseline.FixedPoint
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float Single() => (float)((double)RawData / FractionBitPow2);
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static FP Clamp(FP value, FP min, FP max)
         {
             if (value < min) return min;
             return value > max ? max : value;
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static FP LerpUnclamped(FP a, FP b, FP t)
         {
@@ -166,10 +173,10 @@ namespace EngineX.Baseline.FixedPoint
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool operator <=(FP a, FP b) => a.RawData <= b.RawData;
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool operator >(FP a, int b) => a > FromInt(b);
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool operator >(FP a, FP b) => a.RawData > b.RawData;
 
