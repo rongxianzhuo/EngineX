@@ -32,6 +32,11 @@ namespace EngineX.ECS
         void Execute(ref T0 c0, ref T1 c1, ref T2 c2, ref T3 c3);
     }
 
+    public interface IForEachChunk
+    {
+        void Execute(Chunk chunk);
+    }
+
     public sealed class QueryBuilder
     {
         private readonly World _world;
@@ -123,6 +128,21 @@ namespace EngineX.ECS
                 if (Matches(archetypes[i]))
                 {
                     count += archetypes[i].EntityCount;
+                }
+            }
+            return count;
+        }
+
+        public int CalculateChunkCount()
+        {
+            int count = 0;
+            var archetypes = _world.Archetypes;
+            for (int i = 0; i < archetypes.Count; i++)
+            {
+                var archetype = archetypes[i];
+                if (Matches(archetype))
+                {
+                    count += archetype.Chunks.Count;
                 }
             }
             return count;
@@ -234,6 +254,26 @@ namespace EngineX.ECS
                 }
             }
             return result;
+        }
+
+        public void ToChunkArray(NativeArray<ChunkHandle> reuse)
+        {
+            int count = CalculateChunkCount();
+            if (reuse.Length < count)
+            {
+                throw new ArgumentException($"NativeArray length {reuse.Length} is smaller than required chunk count {count}", nameof(reuse));
+            }
+            int k = 0;
+            var archetypes = _world.Archetypes;
+            for (int i = 0; i < archetypes.Count; i++)
+            {
+                var archetype = archetypes[i];
+                if (!Matches(archetype)) continue;
+                for (int c = 0; c < archetype.Chunks.Count; c++)
+                {
+                    reuse[k++] = new ChunkHandle(archetype.Chunks[c]);
+                }
+            }
         }
 
         public void ForEach<T0>(EntityForEach<T0> action) where T0 : struct, IComponentData
@@ -436,6 +476,20 @@ namespace EngineX.ECS
                     {
                         visitor.Execute(ref array0.GetRef(e), ref array1.GetRef(e), ref array2.GetRef(e), ref array3.GetRef(e));
                     }
+                }
+            }
+        }
+
+        public void ForEachChunk<TVisitor>(ref TVisitor visitor) where TVisitor : struct, IForEachChunk
+        {
+            var archetypes = _world.Archetypes;
+            for (int i = 0; i < archetypes.Count; i++)
+            {
+                var archetype = archetypes[i];
+                if (!Matches(archetype)) continue;
+                for (int c = 0; c < archetype.Chunks.Count; c++)
+                {
+                    visitor.Execute(archetype.Chunks[c]);
                 }
             }
         }
