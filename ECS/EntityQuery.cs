@@ -70,6 +70,25 @@ namespace EngineX.ECS
             return this;
         }
 
+        public QueryBuilder WithAll<T0, T1, T2, T3>() where T0 : struct, IComponentData where T1 : struct, IComponentData where T2 : struct, IComponentData where T3 : struct, IComponentData
+        {
+            _all.Add(ComponentType<T0>.Index);
+            _all.Add(ComponentType<T1>.Index);
+            _all.Add(ComponentType<T2>.Index);
+            _all.Add(ComponentType<T3>.Index);
+            return this;
+        }
+
+        public QueryBuilder WithAll<T0, T1, T2, T3, T4>() where T0 : struct, IComponentData where T1 : struct, IComponentData where T2 : struct, IComponentData where T3 : struct, IComponentData where T4 : struct, IComponentData
+        {
+            _all.Add(ComponentType<T0>.Index);
+            _all.Add(ComponentType<T1>.Index);
+            _all.Add(ComponentType<T2>.Index);
+            _all.Add(ComponentType<T3>.Index);
+            _all.Add(ComponentType<T4>.Index);
+            return this;
+        }
+
         public QueryBuilder WithNone<T0>() where T0 : struct, IComponentData
         {
             _none.Add(ComponentType<T0>.Index);

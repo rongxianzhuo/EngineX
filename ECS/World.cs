@@ -163,6 +163,21 @@ namespace EngineX.ECS
             return new QueryBuilder(this).WithAll<T0, T1>().Build();
         }
 
+        public EntityQuery Query<T0, T1, T2>() where T0 : struct, IComponentData where T1 : struct, IComponentData where T2 : struct, IComponentData
+        {
+            return new QueryBuilder(this).WithAll<T0, T1, T2>().Build();
+        }
+
+        public EntityQuery Query<T0, T1, T2, T3>() where T0 : struct, IComponentData where T1 : struct, IComponentData where T2 : struct, IComponentData where T3 : struct, IComponentData
+        {
+            return new QueryBuilder(this).WithAll<T0, T1, T2, T3>().Build();
+        }
+
+        public EntityQuery Query<T0, T1, T2, T3, T4>() where T0 : struct, IComponentData where T1 : struct, IComponentData where T2 : struct, IComponentData where T3 : struct, IComponentData where T4 : struct, IComponentData
+        {
+            return new QueryBuilder(this).WithAll<T0, T1, T2, T3, T4>().Build();
+        }
+
         public void Dispose()
         {
             for (int i = 0; i < _archetypes.Count; i++)
