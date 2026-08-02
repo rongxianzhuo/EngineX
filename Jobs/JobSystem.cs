@@ -6,7 +6,7 @@ namespace EngineX.Jobs
     {
         public static int WorkerThreadCount => EngineX.Jobs.Internal.JobScheduler.WorkerCount;
 
-        public static int MaxJobThreadCount => EngineX.Jobs.Internal.JobScheduler.MaxWorkerCount;
+        public static int MaxJobThreadCount => EngineX.Jobs.Internal.JobScheduler.MaxJobThreadCount;
 
         public static JobHandle Schedule(IJob job, JobHandle dependsOn = default)
         {

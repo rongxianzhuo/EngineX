@@ -14,14 +14,16 @@ namespace EngineX.Jobs.Internal
 
         public static int WorkerCount => _workerCount;
 
-        public static int MaxWorkerCount => Math.Max(1, Environment.ProcessorCount - 1);
+        public static int MaxJobThreadCount => Environment.ProcessorCount;
+
+        private static int MaxBackgroundWorkers => Math.Max(1, Environment.ProcessorCount - 1);
 
         public static void EnsureInitialized()
         {
             if (Volatile.Read(ref _initialized) != 0) return;
             if (Interlocked.CompareExchange(ref _initialized, 1, 0) != 0) return;
 
-            int count = MaxWorkerCount;
+            int count = MaxBackgroundWorkers;
             _workers = new Thread[count];
             for (int i = 0; i < count; i++)
             {
