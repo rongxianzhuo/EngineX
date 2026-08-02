@@ -61,6 +61,8 @@ namespace EngineX.Baseline.Math
 
         public static Vector3 operator *(FP scalar, Vector3 v) => new(v.X * scalar, v.Y * scalar, v.Z * scalar);
 
+        public static Vector3 operator *(Vector3 a, Vector3 b) => new(a.X * b.X, a.Y * b.Y, a.Z * b.Z);
+
         public static Vector3 operator /(Vector3 v, FP scalar) => new(v.X / scalar, v.Y / scalar, v.Z / scalar);
 
         public static bool operator ==(Vector3 a, Vector3 b) => a.X == b.X && a.Y == b.Y && a.Z == b.Z;
