@@ -1,5 +1,5 @@
 
-namespace EngineX.GameBaseline.FixedPoint
+namespace EngineX.Baseline.FixedPoint
 {
     public static class FpMath
     {

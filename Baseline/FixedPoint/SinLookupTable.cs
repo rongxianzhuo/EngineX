@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Text;
 
-namespace EngineX.GameBaseline.FixedPoint
+namespace EngineX.Baseline.FixedPoint
 {
     public static class SinLookupTable
     {

@@ -2,7 +2,7 @@ using System;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 
-namespace EngineX.GameBaseline.FixedPoint
+namespace EngineX.Baseline.FixedPoint
 {
     public readonly struct FP : IEquatable<FP>
     {
