@@ -12,6 +12,10 @@ namespace EngineX.Baseline.Math
 
         public readonly FP Z;
 
+        // Small-angle threshold (in radians) below which spherical interpolation
+        // falls back to linear interpolation to avoid divide-by-near-zero.
+        private static readonly FP AngleEpsilon = FP.Epsilon * FP.FromInt(100);
+
         public static readonly Vector3 Zero = new(FP.Zero, FP.Zero, FP.Zero);
 
         public static readonly Vector3 One = new(FP.One, FP.One, FP.One);
@@ -158,7 +162,7 @@ namespace EngineX.Baseline.Math
             FP dot = FP.Clamp(Dot(aNorm, bNorm), -1, FP.One);
             FP angleRad = FpMath.Acos(dot);
 
-            if (angleRad.Abs() < FP.Epsilon * FP.FromInt(100))
+            if (angleRad.Abs() < AngleEpsilon)
                 return LerpUnclamped(aNorm, bNorm, t);
 
             FP sinAngle = FpMath.Sin(angleRad);
@@ -167,7 +171,7 @@ namespace EngineX.Baseline.Math
             FP weightA = FpMath.Sin((FP.One - t) * angleRad) * invSinAngle;
             FP weightB = FpMath.Sin(t * angleRad) * invSinAngle;
 
-            return aNorm * weightA + bNorm * weightB;
+            return (aNorm * weightA + bNorm * weightB).Normalized;
         }
 
         public static Vector3 RotateTowards(Vector3 current, Vector3 target, FP maxRadiansDelta, FP maxMagnitudeDelta)
