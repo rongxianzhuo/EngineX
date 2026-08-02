@@ -28,5 +28,19 @@ namespace EngineX.Jobs.Internal
                 Handles[i].Complete();
             }
         }
+
+        internal override int RegisterSuccessor(JobInfo successor)
+        {
+            int count = 0;
+            for (int i = 0; i < Handles.Length; i++)
+            {
+                var h = Handles[i];
+                if (h.Info != null)
+                {
+                    count += h.Info.RegisterSuccessor(successor);
+                }
+            }
+            return count;
+        }
     }
 }

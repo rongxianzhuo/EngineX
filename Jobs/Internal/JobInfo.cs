@@ -9,8 +9,9 @@ namespace EngineX.Jobs.Internal
         public Action Body;
         public int RefCount;
         public readonly ManualResetEventSlim CompletedEvent = new ManualResetEventSlim(false);
-        public List<JobInfo> Successors;
         public Exception Error;
+
+        private List<JobInfo> _successors;
 
         public override bool IsCompleted => CompletedEvent.IsSet;
 
@@ -25,20 +26,33 @@ namespace EngineX.Jobs.Internal
             ThrowPendingError();
         }
 
-        private void ThrowPendingError()
+        internal override int RegisterSuccessor(JobInfo successor)
         {
-            var err = Error;
-            if (err != null)
+            lock (this)
             {
-                Error = null;
-                throw err;
+                if (CompletedEvent.IsSet)
+                {
+                    return 0;
+                }
+                _successors ??= new List<JobInfo>();
+                _successors.Add(successor);
+                return 1;
             }
         }
 
-        internal void DispatchSuccessors()
+        internal void MarkCompletedAndDispatch()
         {
-            var succs = Successors;
-            Successors = null;
+            List<JobInfo> succs;
+            lock (this)
+            {
+                if (CompletedEvent.IsSet)
+                {
+                    return;
+                }
+                CompletedEvent.Set();
+                succs = _successors;
+                _successors = null;
+            }
             if (succs == null) return;
             for (int i = 0; i < succs.Count; i++)
             {
@@ -47,6 +61,16 @@ namespace EngineX.Jobs.Internal
                 {
                     JobScheduler.EnqueueReady(s);
                 }
+            }
+        }
+
+        private void ThrowPendingError()
+        {
+            var err = Error;
+            if (err != null)
+            {
+                Error = null;
+                throw err;
             }
         }
     }
