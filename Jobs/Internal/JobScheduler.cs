@@ -61,7 +61,10 @@ namespace EngineX.Jobs.Internal
         {
             try
             {
-                job.Body();
+                if (!job.IsSkipped)
+                {
+                    job.Body();
+                }
             }
             catch (Exception ex)
             {
@@ -81,11 +84,18 @@ namespace EngineX.Jobs.Internal
             EnsureInitialized();
             var info = new JobInfo { Body = body };
             int refCount = 0;
-            if (dependsOn.Info != null && !dependsOn.Info.IsCompleted)
+            if (dependsOn.Info != null)
             {
-                refCount = dependsOn.Info.RegisterSuccessor(info);
+                if (!dependsOn.Info.IsCompleted)
+                {
+                    refCount = dependsOn.Info.RegisterSuccessor(info);
+                }
+                else if (dependsOn.Info.HasError)
+                {
+                    JobInfo.MarkSkipped(dependsOn.Info.FirstError, info);
+                }
             }
-            info.RefCount = refCount;
+            Volatile.Write(ref info.RefCount, refCount);
             if (refCount == 0)
             {
                 EnqueueReady(info);
@@ -93,72 +103,60 @@ namespace EngineX.Jobs.Internal
             return new JobHandle(info);
         }
 
-        public static JobHandle ScheduleParallelFor(Action<int> body, int arrayLength, JobHandle dependsOn)
+        public static JobHandle ScheduleParallelFor(Action<int> body, int arrayLength, int innerLoopBatchCount, JobHandle dependsOn)
         {
             EnsureInitialized();
-            int workerCount = _workerCount;
-            if (arrayLength <= 0 || workerCount <= 1)
-            {
-                return Schedule(() =>
-                {
-                    for (int i = 0; i < arrayLength; i++) body(i);
-                }, dependsOn);
-            }
+            if (arrayLength <= 0) return default;
 
-            var handles = new JobHandle[workerCount];
-            int chunkSize = (arrayLength + workerCount - 1) / workerCount;
-            for (int w = 0; w < workerCount; w++)
+            int batchSize = Math.Max(1, innerLoopBatchCount);
+            int batchCount = (arrayLength + batchSize - 1) / batchSize;
+            int jobCount = Math.Min(_workerCount, batchCount);
+
+            int cursor = 0;
+            var pull = new Action(() =>
             {
-                int start = w * chunkSize;
-                int end = Math.Min(start + chunkSize, arrayLength);
-                if (start >= end) break;
-                int localStart = start;
-                int localEnd = end;
-                handles[w] = Schedule(() =>
+                while (true)
                 {
-                    for (int i = localStart; i < localEnd; i++) body(i);
-                }, dependsOn);
+                    int start = Interlocked.Add(ref cursor, batchSize) - batchSize;
+                    if (start >= arrayLength) break;
+                    int count = Math.Min(batchSize, arrayLength - start);
+                    for (int i = 0; i < count; i++) body(start + i);
+                }
+            });
+
+            var handles = new JobHandle[jobCount];
+            for (int w = 0; w < jobCount; w++)
+            {
+                handles[w] = Schedule(pull, dependsOn);
             }
             return JobHandle.CombineDependencies(handles);
         }
 
-        public static JobHandle ScheduleParallelForBatch(Action<int, int> body, int arrayLength, JobHandle dependsOn)
+        public static JobHandle ScheduleParallelForBatch(Action<int, int> body, int arrayLength, int innerLoopBatchCount, JobHandle dependsOn)
         {
             EnsureInitialized();
-            int workerCount = _workerCount;
-            if (arrayLength <= 0 || workerCount <= 1)
-            {
-                return Schedule(() =>
-                {
-                    int b = 0;
-                    while (b < arrayLength)
-                    {
-                        int next = Math.Min(b + 64, arrayLength);
-                        body(b, next - b);
-                        b = next;
-                    }
-                }, dependsOn);
-            }
+            if (arrayLength <= 0) return default;
 
-            var handles = new JobHandle[workerCount];
-            int chunkSize = (arrayLength + workerCount - 1) / workerCount;
-            for (int w = 0; w < workerCount; w++)
+            int batchSize = Math.Max(1, innerLoopBatchCount);
+            int batchCount = (arrayLength + batchSize - 1) / batchSize;
+            int jobCount = Math.Min(_workerCount, batchCount);
+
+            int cursor = 0;
+            var pull = new Action(() =>
             {
-                int start = w * chunkSize;
-                int end = Math.Min(start + chunkSize, arrayLength);
-                if (start >= end) break;
-                int localStart = start;
-                int localEnd = end;
-                handles[w] = Schedule(() =>
+                while (true)
                 {
-                    int b = localStart;
-                    while (b < localEnd)
-                    {
-                        int next = Math.Min(b + 64, localEnd);
-                        body(b, next - b);
-                        b = next;
-                    }
-                }, dependsOn);
+                    int start = Interlocked.Add(ref cursor, batchSize) - batchSize;
+                    if (start >= arrayLength) break;
+                    int count = Math.Min(batchSize, arrayLength - start);
+                    body(start, count);
+                }
+            });
+
+            var handles = new JobHandle[jobCount];
+            for (int w = 0; w < jobCount; w++)
+            {
+                handles[w] = Schedule(pull, dependsOn);
             }
             return JobHandle.CombineDependencies(handles);
         }

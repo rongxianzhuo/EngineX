@@ -1,3 +1,5 @@
+using System;
+
 namespace EngineX.Jobs.Internal
 {
     internal abstract class JobInfoBase
@@ -7,5 +9,9 @@ namespace EngineX.Jobs.Internal
         public abstract void Complete();
 
         internal abstract int RegisterSuccessor(JobInfo successor);
+
+        internal abstract bool HasError { get; }
+
+        internal abstract Exception FirstError { get; }
     }
 }

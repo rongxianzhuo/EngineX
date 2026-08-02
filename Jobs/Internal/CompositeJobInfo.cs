@@ -1,3 +1,5 @@
+using System;
+
 namespace EngineX.Jobs.Internal
 {
     internal sealed class CompositeJobInfo : JobInfoBase
@@ -41,6 +43,31 @@ namespace EngineX.Jobs.Internal
                 }
             }
             return count;
+        }
+
+        internal override bool HasError
+        {
+            get
+            {
+                for (int i = 0; i < Handles.Length; i++)
+                {
+                    if (Handles[i].Info != null && Handles[i].Info.HasError) return true;
+                }
+                return false;
+            }
+        }
+
+        internal override Exception FirstError
+        {
+            get
+            {
+                for (int i = 0; i < Handles.Length; i++)
+                {
+                    var err = Handles[i].Info?.FirstError;
+                    if (err != null) return err;
+                }
+                return null;
+            }
         }
     }
 }
