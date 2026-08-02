@@ -28,5 +28,20 @@ namespace EngineX.Jobs
             }
             return default;
         }
+
+        public static JobHandle ScheduleParallel<T>(IJobParallelForBatch job, NativeArray<T> array, int innerLoopBatchCount = 1, JobHandle dependsOn = default) where T : struct
+        {
+            if (job == null) throw new ArgumentNullException(nameof(job));
+            if (innerLoopBatchCount < 1) innerLoopBatchCount = 1;
+            if (!array.IsCreated) throw new ArgumentException("NativeArray is not allocated", nameof(array));
+            dependsOn.Complete();
+            int length = array.Length;
+            for (int start = 0; start < length; start += innerLoopBatchCount)
+            {
+                int count = Math.Min(innerLoopBatchCount, length - start);
+                job.Execute(start, count);
+            }
+            return default;
+        }
     }
 }
