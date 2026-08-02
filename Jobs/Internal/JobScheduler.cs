@@ -6,7 +6,7 @@ namespace EngineX.Jobs.Internal
 {
     internal static class JobScheduler
     {
-        private static readonly ConcurrentQueue<JobInfo> Pending = new ConcurrentQueue<JobInfo>();
+        private static readonly ConcurrentQueue<JobInfoBase> Pending = new ConcurrentQueue<JobInfoBase>();
         private static readonly SemaphoreSlim Wakeup = new SemaphoreSlim(0, int.MaxValue);
         private static Thread[] _workers;
         private static int _workerCount;
@@ -57,13 +57,13 @@ namespace EngineX.Jobs.Internal
             }
         }
 
-        private static void RunJob(JobInfo job)
+        private static void RunJob(JobInfoBase job)
         {
             try
             {
                 if (!job.IsSkipped)
                 {
-                    job.Body();
+                    job.ExecuteBody();
                 }
             }
             catch (Exception ex)
@@ -73,34 +73,59 @@ namespace EngineX.Jobs.Internal
             job.MarkCompletedAndDispatch();
         }
 
-        public static void EnqueueReady(JobInfo job)
+        public static void EnqueueReady(JobInfoBase job)
         {
             Pending.Enqueue(job);
             Wakeup.Release();
         }
 
+        public static JobHandle Schedule<T>(T job, JobHandle dependsOn) where T : struct, IJob
+        {
+            EnsureInitialized();
+            var info = JobInfo<T>.Acquire();
+            info.Job = job;
+            return RegisterAndEnqueue(info, dependsOn);
+        }
+
         public static JobHandle Schedule(Action body, JobHandle dependsOn)
         {
             EnsureInitialized();
-            var info = new JobInfo { Body = body };
-            int refCount = 0;
-            if (dependsOn.Info != null)
+            var info = JobInfo.Acquire();
+            info.Body = body;
+            return RegisterAndEnqueue(info, dependsOn);
+        }
+
+        public static JobHandle ScheduleParallelFor<T>(T job, int arrayLength, int innerLoopBatchCount, JobHandle dependsOn) where T : struct, IJobParallelFor
+        {
+            EnsureInitialized();
+            if (arrayLength <= 0) return default;
+
+            int batchSize = Math.Max(1, innerLoopBatchCount);
+            int batchCount = (arrayLength + batchSize - 1) / batchSize;
+            int jobCount = Math.Min(_workerCount, batchCount);
+
+            // Barrier node: one handle for the whole parallel-for. It owns the
+            // shared batch cursor and completes when every worker is done.
+            var parent = JobInfo.Acquire();
+            parent.Cursor = 0;
+            Volatile.Write(ref parent.RefCount, jobCount);
+
+            for (int w = 0; w < jobCount; w++)
             {
-                if (!dependsOn.Info.IsCompleted)
-                {
-                    refCount = dependsOn.Info.RegisterSuccessor(info);
-                }
-                else if (dependsOn.Info.HasError)
-                {
-                    JobInfo.MarkSkipped(dependsOn.Info.FirstError, info);
-                }
+                var worker = ParallelForJobInfo<T>.Acquire();
+                worker.Job = job;
+                worker.ArrayLength = arrayLength;
+                worker.BatchSize = batchSize;
+                worker.Owner = parent;
+                worker.AddSuccessor(parent);
+                parent.Children ??= new System.Collections.Generic.List<JobInfoBase>();
+                parent.Children.Add(worker);
+
+                int refCount = RegisterDependency(worker, dependsOn);
+                Volatile.Write(ref worker.RefCount, refCount);
+                if (refCount == 0) EnqueueReady(worker);
             }
-            Volatile.Write(ref info.RefCount, refCount);
-            if (refCount == 0)
-            {
-                EnqueueReady(info);
-            }
-            return new JobHandle(info);
+            return new JobHandle(parent);
         }
 
         public static JobHandle ScheduleParallelFor(Action<int> body, int arrayLength, int innerLoopBatchCount, JobHandle dependsOn)
@@ -112,24 +137,57 @@ namespace EngineX.Jobs.Internal
             int batchCount = (arrayLength + batchSize - 1) / batchSize;
             int jobCount = Math.Min(_workerCount, batchCount);
 
-            int cursor = 0;
-            var pull = new Action(() =>
-            {
-                while (true)
-                {
-                    int start = Interlocked.Add(ref cursor, batchSize) - batchSize;
-                    if (start >= arrayLength) break;
-                    int count = Math.Min(batchSize, arrayLength - start);
-                    for (int i = 0; i < count; i++) body(start + i);
-                }
-            });
+            var parent = JobInfo.Acquire();
+            parent.Cursor = 0;
+            Volatile.Write(ref parent.RefCount, jobCount);
 
-            var handles = new JobHandle[jobCount];
             for (int w = 0; w < jobCount; w++)
             {
-                handles[w] = Schedule(pull, dependsOn);
+                var worker = ParallelForActionJobInfo.Acquire();
+                worker.Body = body;
+                worker.ArrayLength = arrayLength;
+                worker.BatchSize = batchSize;
+                worker.Owner = parent;
+                worker.AddSuccessor(parent);
+                parent.Children ??= new System.Collections.Generic.List<JobInfoBase>();
+                parent.Children.Add(worker);
+
+                int refCount = RegisterDependency(worker, dependsOn);
+                Volatile.Write(ref worker.RefCount, refCount);
+                if (refCount == 0) EnqueueReady(worker);
             }
-            return JobHandle.CombineDependencies(handles);
+            return new JobHandle(parent);
+        }
+
+        public static JobHandle ScheduleParallelForBatch<T>(T job, int arrayLength, int innerLoopBatchCount, JobHandle dependsOn) where T : struct, IJobParallelForBatch
+        {
+            EnsureInitialized();
+            if (arrayLength <= 0) return default;
+
+            int batchSize = Math.Max(1, innerLoopBatchCount);
+            int batchCount = (arrayLength + batchSize - 1) / batchSize;
+            int jobCount = Math.Min(_workerCount, batchCount);
+
+            var parent = JobInfo.Acquire();
+            parent.Cursor = 0;
+            Volatile.Write(ref parent.RefCount, jobCount);
+
+            for (int w = 0; w < jobCount; w++)
+            {
+                var worker = ParallelForBatchJobInfo<T>.Acquire();
+                worker.Job = job;
+                worker.ArrayLength = arrayLength;
+                worker.BatchSize = batchSize;
+                worker.Owner = parent;
+                worker.AddSuccessor(parent);
+                parent.Children ??= new System.Collections.Generic.List<JobInfoBase>();
+                parent.Children.Add(worker);
+
+                int refCount = RegisterDependency(worker, dependsOn);
+                Volatile.Write(ref worker.RefCount, refCount);
+                if (refCount == 0) EnqueueReady(worker);
+            }
+            return new JobHandle(parent);
         }
 
         public static JobHandle ScheduleParallelForBatch(Action<int, int> body, int arrayLength, int innerLoopBatchCount, JobHandle dependsOn)
@@ -141,24 +199,56 @@ namespace EngineX.Jobs.Internal
             int batchCount = (arrayLength + batchSize - 1) / batchSize;
             int jobCount = Math.Min(_workerCount, batchCount);
 
-            int cursor = 0;
-            var pull = new Action(() =>
-            {
-                while (true)
-                {
-                    int start = Interlocked.Add(ref cursor, batchSize) - batchSize;
-                    if (start >= arrayLength) break;
-                    int count = Math.Min(batchSize, arrayLength - start);
-                    body(start, count);
-                }
-            });
+            var parent = JobInfo.Acquire();
+            parent.Cursor = 0;
+            Volatile.Write(ref parent.RefCount, jobCount);
 
-            var handles = new JobHandle[jobCount];
             for (int w = 0; w < jobCount; w++)
             {
-                handles[w] = Schedule(pull, dependsOn);
+                var worker = ParallelForBatchActionJobInfo.Acquire();
+                worker.Body = body;
+                worker.ArrayLength = arrayLength;
+                worker.BatchSize = batchSize;
+                worker.Owner = parent;
+                worker.AddSuccessor(parent);
+                parent.Children ??= new System.Collections.Generic.List<JobInfoBase>();
+                parent.Children.Add(worker);
+
+                int refCount = RegisterDependency(worker, dependsOn);
+                Volatile.Write(ref worker.RefCount, refCount);
+                if (refCount == 0) EnqueueReady(worker);
             }
-            return JobHandle.CombineDependencies(handles);
+            return new JobHandle(parent);
+        }
+
+        private static JobHandle RegisterAndEnqueue(JobInfoBase info, JobHandle dependsOn)
+        {
+            int refCount = RegisterDependency(info, dependsOn);
+            Volatile.Write(ref info.RefCount, refCount);
+            if (refCount == 0)
+            {
+                EnqueueReady(info);
+            }
+            return new JobHandle(info);
+        }
+
+        private static int RegisterDependency(JobInfoBase info, JobHandle dependsOn)
+        {
+            var dep = dependsOn.Info;
+            if (dep == null) return 0;
+            lock (dep)
+            {
+                if (dep.Version != dependsOn.Version) return 0;
+                if (!dep.IsCompleted)
+                {
+                    return dep.RegisterSuccessor(info);
+                }
+                if (dep.HasError)
+                {
+                    JobInfoBase.MarkSkipped(dep.FirstError, info);
+                }
+                return 0;
+            }
         }
     }
 }

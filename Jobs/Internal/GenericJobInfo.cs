@@ -4,29 +4,29 @@ using System.Threading;
 
 namespace EngineX.Jobs.Internal
 {
-    internal sealed class JobInfo : JobInfoBase
+    internal sealed class JobInfo<T> : JobInfoBase where T : struct, IJob
     {
-        public Action Body;
+        public T Job;
 
-        private static readonly ThreadLocal<Stack<JobInfo>> Pool =
-            new ThreadLocal<Stack<JobInfo>>(() => new Stack<JobInfo>());
+        private static readonly ThreadLocal<Stack<JobInfo<T>>> Pool =
+            new ThreadLocal<Stack<JobInfo<T>>>(() => new Stack<JobInfo<T>>());
 
-        internal static JobInfo Acquire()
+        internal static JobInfo<T> Acquire()
         {
             var pool = Pool.Value;
-            var info = pool.Count > 0 ? pool.Pop() : new JobInfo();
+            var info = pool.Count > 0 ? pool.Pop() : new JobInfo<T>();
             info.Reset();
             return info;
         }
 
         public override void ExecuteBody()
         {
-            Body?.Invoke();
+            Job.Execute();
         }
 
         protected override void PushToPool()
         {
-            Body = null;
+            Job = default;
             Pool.Value.Push(this);
         }
     }
@@ -34,22 +34,22 @@ namespace EngineX.Jobs.Internal
     // Parallel-for workers never expose their handle to users, so they live in a
     // global pool (recycled on worker threads, acquired on scheduling threads)
     // and recycle themselves right after dispatch.
-    internal sealed class ParallelForActionJobInfo : JobInfoBase
+    internal sealed class ParallelForJobInfo<T> : JobInfoBase where T : struct, IJobParallelFor
     {
-        public Action<int> Body;
+        public T Job;
         public int ArrayLength;
         public int BatchSize;
         public JobInfoBase Owner;
 
-        private static readonly Stack<ParallelForActionJobInfo> Pool = new Stack<ParallelForActionJobInfo>();
+        private static readonly Stack<ParallelForJobInfo<T>> Pool = new Stack<ParallelForJobInfo<T>>();
         private static readonly object PoolLock = new object();
 
 
-        internal static ParallelForActionJobInfo Acquire()
+        internal static ParallelForJobInfo<T> Acquire()
         {
             lock (PoolLock)
             {
-                var info = Pool.Count > 0 ? Pool.Pop() : new ParallelForActionJobInfo();
+                var info = Pool.Count > 0 ? Pool.Pop() : new ParallelForJobInfo<T>();
                 info.Reset();
                 return info;
             }
@@ -62,13 +62,13 @@ namespace EngineX.Jobs.Internal
                 int start = Interlocked.Add(ref Owner.Cursor, BatchSize) - BatchSize;
                 if (start >= ArrayLength) return;
                 int count = Math.Min(BatchSize, ArrayLength - start);
-                for (int i = 0; i < count; i++) Body(start + i);
+                for (int i = 0; i < count; i++) Job.Execute(start + i);
             }
         }
 
         protected override void PushToPool()
         {
-            Body = null;
+            Job = default;
             Owner = null;
             ArrayLength = 0;
             BatchSize = 0;
@@ -79,22 +79,22 @@ namespace EngineX.Jobs.Internal
         }
     }
 
-    internal sealed class ParallelForBatchActionJobInfo : JobInfoBase
+    internal sealed class ParallelForBatchJobInfo<T> : JobInfoBase where T : struct, IJobParallelForBatch
     {
-        public Action<int, int> Body;
+        public T Job;
         public int ArrayLength;
         public int BatchSize;
         public JobInfoBase Owner;
 
-        private static readonly Stack<ParallelForBatchActionJobInfo> Pool = new Stack<ParallelForBatchActionJobInfo>();
+        private static readonly Stack<ParallelForBatchJobInfo<T>> Pool = new Stack<ParallelForBatchJobInfo<T>>();
         private static readonly object PoolLock = new object();
 
 
-        internal static ParallelForBatchActionJobInfo Acquire()
+        internal static ParallelForBatchJobInfo<T> Acquire()
         {
             lock (PoolLock)
             {
-                var info = Pool.Count > 0 ? Pool.Pop() : new ParallelForBatchActionJobInfo();
+                var info = Pool.Count > 0 ? Pool.Pop() : new ParallelForBatchJobInfo<T>();
                 info.Reset();
                 return info;
             }
@@ -107,13 +107,13 @@ namespace EngineX.Jobs.Internal
                 int start = Interlocked.Add(ref Owner.Cursor, BatchSize) - BatchSize;
                 if (start >= ArrayLength) return;
                 int count = Math.Min(BatchSize, ArrayLength - start);
-                Body(start, count);
+                Job.Execute(start, count);
             }
         }
 
         protected override void PushToPool()
         {
-            Body = null;
+            Job = default;
             Owner = null;
             ArrayLength = 0;
             BatchSize = 0;
