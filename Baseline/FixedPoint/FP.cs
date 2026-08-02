@@ -16,6 +16,8 @@ namespace EngineX.Baseline.FixedPoint
         public static readonly FP Epsilon = new FP(1L);
         public static readonly FP One = new FP(1L << FractionBit);
         public static readonly FP MaxValue = new FP(0x7FFFFFFFFFFFFFFFL);
+        public static readonly FP Deg2Rad = PI / 180;
+        public static readonly FP Rad2Deg = 180 / PI;
 
         public readonly long RawData;
 
@@ -24,20 +26,23 @@ namespace EngineX.Baseline.FixedPoint
             RawData = rawData;
         }
 
-        public FP Sqrt()
+        public FP Sqrt
         {
-            if (this <= 0) return Zero;
-            var l = Epsilon;
-            var r = this;
-            while (r - l > Epsilon)
+            get
             {
-                var m = (l + r) >> 1;
-                var m2 = m * m;
-                if (m2 == this) return m;
-                if (m2 > this) r = m;
-                else l = m;
+                if (this <= 0) return Zero;
+                var l = Epsilon;
+                var r = this;
+                while (r - l > Epsilon)
+                {
+                    var m = (l + r) >> 1;
+                    var m2 = m * m;
+                    if (m2 == this) return m;
+                    if (m2 > this) r = m;
+                    else l = m;
+                }
+                return l;
             }
-            return l;
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -100,6 +105,25 @@ namespace EngineX.Baseline.FixedPoint
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float Single() => (float)((double)RawData / FractionBitPow2);
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static FP Clamp(FP value, FP min, FP max)
+        {
+            if (value < min) return min;
+            return value > max ? max : value;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static FP LerpUnclamped(FP a, FP b, FP t)
+        {
+            return a + (b - a) * t;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static FP Clamp01(FP value)
+        {
+            return Clamp(value, Zero, One);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static FP operator %(FP a, FP b) => new FP(a.RawData % b.RawData);
@@ -237,6 +261,8 @@ namespace EngineX.Baseline.FixedPoint
         {
             return a < b ? a : b;
         }
+
+        public static implicit operator FP(int i) => FromInt(i);
 
         public override string ToString()
         {
