@@ -20,6 +20,7 @@ namespace EngineX.Baseline.FixedPoint
         public static readonly FP Zero = default;
         public static readonly FP Epsilon = new FP(1L);
         public static readonly FP One = new FP(1L << FractionBit);
+        public static readonly FP Half = new FP(1L << (FractionBit - 1));
         public static readonly FP MaxValue = new FP(0x7FFFFFFFFFFFFFFFL);
 
         public readonly long RawData;
