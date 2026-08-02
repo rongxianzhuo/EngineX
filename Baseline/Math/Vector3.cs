@@ -3,7 +3,7 @@ using EngineX.Baseline.FixedPoint;
 
 namespace EngineX.Baseline.Math
 {
-    public readonly partial struct Vector3 : IEquatable<Vector3>
+    public readonly struct Vector3 : IEquatable<Vector3>
     {
 
         public readonly FP X;

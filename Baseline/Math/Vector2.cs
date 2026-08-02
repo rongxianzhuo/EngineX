@@ -1,7 +1,7 @@
 using System;
 using EngineX.Baseline.FixedPoint;
 
-namespace EngineX.Foundation.Math
+namespace EngineX.Baseline.Math
 {
     public readonly struct Vector2 : IEquatable<Vector2>
     {
