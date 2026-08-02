@@ -51,7 +51,6 @@ namespace EngineX.Baseline.FixedPoint
 
         public static readonly FP[] Table = new[]
         {
-            // Table[0] is acos(-1) = π. Keep in sync with FP.PI (13493037705).
             FP.FromRawData(13493037705L),
             FP.FromRawData(12732795904),
             FP.FromRawData(12416480256),
