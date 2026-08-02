@@ -13,6 +13,9 @@ namespace EngineX.Baseline.Math
 
         public readonly FP W;
 
+        // Dot-product threshold used to detect (near-)parallel quaternion directions.
+        private static readonly FP DotParallelEpsilon = FP.Epsilon * FP.FromInt(100);
+
         public static readonly Quaternion Identity = new(FP.Zero, FP.Zero, FP.Zero, FP.One);
 
         public Quaternion(FP x, FP y, FP z, FP w)
@@ -89,10 +92,10 @@ namespace EngineX.Baseline.Math
 
             FP dot = Vector3.Dot(fromDirection, toDirection);
 
-            if (dot > FP.One - FP.Epsilon * FP.FromInt(100))
+            if (dot > FP.One - DotParallelEpsilon)
                 return Identity;
 
-            if (dot < -1 + FP.Epsilon * FP.FromInt(100))
+            if (dot < -1 + DotParallelEpsilon)
             {
                 Vector3 axis = (fromDirection.X).Abs() < (fromDirection.Z).Abs()
                     ? new Vector3(FP.One, FP.Zero, FP.Zero)
@@ -277,7 +280,7 @@ namespace EngineX.Baseline.Math
                 bAdjusted = new Quaternion(-b.X, -b.Y, -b.Z, -b.W);
             }
 
-            if (dot > FP.One - FP.Epsilon * FP.FromInt(100))
+            if (dot > FP.One - DotParallelEpsilon)
             {
                 Quaternion lerped = new Quaternion(
                     FP.LerpUnclamped(a.X, bAdjusted.X, t),
@@ -337,7 +340,7 @@ namespace EngineX.Baseline.Math
 
         public bool Equals(Quaternion other) => this == other;
 
-        public override bool Equals(object obj) => obj is Quaternion other && Equals(other);
+        public override bool Equals(object? obj) => obj is Quaternion other && Equals(other);
 
         public override int GetHashCode() => HashCode.Combine(X, Y, Z, W);
 

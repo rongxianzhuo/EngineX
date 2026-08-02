@@ -9,15 +9,19 @@ namespace EngineX.Baseline.Math
 
         public readonly FP Y;
 
+        // Small-angle threshold (in radians) below which spherical interpolation
+        // falls back to linear interpolation to avoid divide-by-near-zero.
+        private static readonly FP AngleEpsilon = FP.Epsilon * FP.FromInt(100);
+
         public static readonly Vector2 Zero = new(FP.Zero, FP.Zero);
 
         public static readonly Vector2 One = new(FP.One, FP.One);
 
         public static readonly Vector2 Up = new(FP.Zero, FP.One);
 
-        public static readonly Vector2 Down = new(FP.Zero, -1);
+        public static readonly Vector2 Down = new(FP.Zero, -FP.One);
 
-        public static readonly Vector2 Left = new(-1, 0);
+        public static readonly Vector2 Left = new(-FP.One, FP.Zero);
 
         public static readonly Vector2 Right = new(FP.One, FP.Zero);
 
@@ -106,6 +110,91 @@ namespace EngineX.Baseline.Math
         {
             FP dot = Dot(inDirection, inNormal);
             return inDirection - 2 * dot * inNormal;
+        }
+
+        public static Vector2 Project(Vector2 vector, Vector2 onNormal)
+        {
+            FP sqrMag = onNormal.SqrMagnitude;
+            if (sqrMag == FP.Zero)
+                return Zero;
+            FP dot = Dot(vector, onNormal);
+            return onNormal * (dot / sqrMag);
+        }
+
+        public static Vector2 ProjectOnPlane(Vector2 vector, Vector2 planeNormal)
+        {
+            return vector - Project(vector, planeNormal);
+        }
+
+        public static Vector2 Slerp(Vector2 a, Vector2 b, FP t)
+        {
+            t = FP.Clamp01(t);
+            return SlerpUnclamped(a, b, t);
+        }
+
+        public static Vector2 SlerpUnclamped(Vector2 a, Vector2 b, FP t)
+        {
+            Vector2 aNorm = a.Normalized;
+            Vector2 bNorm = b.Normalized;
+
+            if (aNorm == Zero || bNorm == Zero)
+                return LerpUnclamped(aNorm, bNorm, t);
+
+            FP dot = FP.Clamp(Dot(aNorm, bNorm), -1, FP.One);
+            FP angleRad = FpMath.Acos(dot);
+
+            if (angleRad.Abs() < AngleEpsilon)
+                return LerpUnclamped(aNorm, bNorm, t);
+
+            FP sinAngle = FpMath.Sin(angleRad);
+            FP invSinAngle = FP.One / sinAngle;
+
+            FP weightA = FpMath.Sin((FP.One - t) * angleRad) * invSinAngle;
+            FP weightB = FpMath.Sin(t * angleRad) * invSinAngle;
+
+            return (aNorm * weightA + bNorm * weightB).Normalized;
+        }
+
+        public static Vector2 RotateTowards(Vector2 current, Vector2 target, FP maxRadiansDelta, FP maxMagnitudeDelta)
+        {
+            FP curMag = current.Magnitude;
+            FP targetMag = target.Magnitude;
+
+            if (curMag == FP.Zero || targetMag == FP.Zero)
+                return MoveTowards(current, target, maxMagnitudeDelta);
+
+            Vector2 curNorm = current / curMag;
+            Vector2 targetNorm = target / targetMag;
+
+            FP dot = FP.Clamp(Dot(curNorm, targetNorm), -1, FP.One);
+            FP angleRad = FpMath.Acos(dot);
+
+            Vector2 newDir;
+            if (angleRad <= maxRadiansDelta)
+            {
+                newDir = targetNorm;
+            }
+            else
+            {
+                FP t = maxRadiansDelta / angleRad;
+                FP sinAngle = FpMath.Sin(angleRad);
+                FP invSinAngle = FP.One / sinAngle;
+                FP weightA = FpMath.Sin((FP.One - t) * angleRad) * invSinAngle;
+                FP weightB = FpMath.Sin(t * angleRad) * invSinAngle;
+                newDir = (curNorm * weightA + targetNorm * weightB).Normalized;
+            }
+
+            FP newMag = MoveTowardsScalar(curMag, targetMag, maxMagnitudeDelta);
+            return newDir * newMag;
+        }
+
+        private static FP MoveTowardsScalar(FP current, FP target, FP maxDelta)
+        {
+            FP diff = target - current;
+            FP absDiff = diff.Abs();
+            if (absDiff <= maxDelta || absDiff == FP.Zero)
+                return target;
+            return current + diff.Sign() * maxDelta;
         }
 
         public static Vector2 Max(Vector2 a, Vector2 b)
