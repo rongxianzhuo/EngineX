@@ -63,8 +63,7 @@ namespace EngineX.ECS.Components
 
         public Vector3 TransformPoint(Vector3 point)
         {
-            var scaled = new Vector3(point.X * Scale.X, point.Y * Scale.Y, point.Z * Scale.Z);
-            return Position + Rotation * scaled;
+            return Position + Rotation * (point * Scale);
         }
 
         public Vector3 TransformDirection(Vector3 direction)
