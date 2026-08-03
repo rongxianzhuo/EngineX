@@ -16,6 +16,10 @@ namespace EngineX.ECS
 
         private readonly Dictionary<int, int> _componentIndexByType;
 
+        private readonly Dictionary<int, Archetype> _addCache = new Dictionary<int, Archetype>();
+
+        private readonly Dictionary<int, Archetype> _removeCache = new Dictionary<int, Archetype>();
+
         public int TypeCount => TypeIndexes.Length;
 
         public Archetype(int[] typeIndexes)
@@ -43,14 +47,38 @@ namespace EngineX.ECS
             return ComponentArrayFactory.Create(TypeIndexes[componentIndex], capacity, ChunkAllocator);
         }
 
+        public Archetype GetArchetypeAfterAdd(int typeIndex, World world)
+        {
+            if (_addCache.TryGetValue(typeIndex, out var cached))
+            {
+                return cached;
+            }
+            var newTypes = InsertSorted(TypeIndexes, typeIndex);
+            var archetype = world.GetOrCreateArchetype(newTypes);
+            _addCache[typeIndex] = archetype;
+            return archetype;
+        }
+
+        public Archetype GetArchetypeAfterRemove(int typeIndex, World world)
+        {
+            if (_removeCache.TryGetValue(typeIndex, out var cached))
+            {
+                return cached;
+            }
+            var newTypes = RemoveSorted(TypeIndexes, typeIndex);
+            var archetype = world.GetOrCreateArchetype(newTypes);
+            _removeCache[typeIndex] = archetype;
+            return archetype;
+        }
+
         public Chunk AcquireChunk()
         {
-            if (Chunks.Count > 0)
+            for (int i = Chunks.Count - 1; i >= 0; i--)
             {
-                var last = Chunks[Chunks.Count - 1];
-                if (last.Count < Chunk.Capacity)
+                var c = Chunks[i];
+                if (c.Count < Chunk.Capacity)
                 {
-                    return last;
+                    return c;
                 }
             }
             var chunk = new Chunk(this);
@@ -58,15 +86,42 @@ namespace EngineX.ECS
             return chunk;
         }
 
-        public void ReleaseEmptyChunk(Chunk chunk)
+        public void RecycleEmptyChunk(Chunk chunk)
         {
-            Chunks.Remove(chunk);
-            chunk.Dispose();
+            chunk.Count = 0;
         }
 
         public bool TryGetComponentIndex(int typeIndex, out int componentIndex)
         {
             return _componentIndexByType.TryGetValue(typeIndex, out componentIndex);
+        }
+
+        internal static int[] InsertSorted(int[] sorted, int value)
+        {
+            int index = Array.BinarySearch(sorted, value);
+            if (index >= 0)
+            {
+                return sorted;
+            }
+            index = ~index;
+            var result = new int[sorted.Length + 1];
+            Array.Copy(sorted, 0, result, 0, index);
+            result[index] = value;
+            Array.Copy(sorted, index, result, index + 1, sorted.Length - index);
+            return result;
+        }
+
+        internal static int[] RemoveSorted(int[] sorted, int value)
+        {
+            int index = Array.BinarySearch(sorted, value);
+            if (index < 0)
+            {
+                return sorted;
+            }
+            var result = new int[sorted.Length - 1];
+            Array.Copy(sorted, 0, result, 0, index);
+            Array.Copy(sorted, index + 1, result, index, sorted.Length - index - 1);
+            return result;
         }
     }
 

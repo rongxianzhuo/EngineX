@@ -126,7 +126,7 @@ namespace EngineX.ECS
                 loc.Chunk.GetComponentRef<T>(loc.IndexInChunk) = data;
                 return;
             }
-            var target = GetOrCreateArchetype(InsertSorted(loc.Archetype.TypeIndexes, typeIndex));
+            var target = loc.Archetype.GetArchetypeAfterAdd(typeIndex, this);
             MoveEntityToArchetype(entity, target);
             ref var moved = ref _locations[entity.Index];
             moved.Chunk.GetComponentRef<T>(moved.IndexInChunk) = data;
@@ -144,7 +144,7 @@ namespace EngineX.ECS
             {
                 return;
             }
-            var target = GetOrCreateArchetype(RemoveSorted(src.TypeIndexes, typeIndex));
+            var target = src.GetArchetypeAfterRemove(typeIndex, this);
             MoveEntityToArchetype(entity, target);
         }
 
@@ -241,7 +241,7 @@ namespace EngineX.ECS
                 && loc.Version == entity.Version;
         }
 
-        private Archetype GetOrCreateArchetype(int[] typeIndexes)
+        internal Archetype GetOrCreateArchetype(int[] typeIndexes)
         {
             var key = new ArchetypeKey(typeIndexes);
             if (_archetypeByKey.TryGetValue(key, out var archetype))
@@ -294,7 +294,7 @@ namespace EngineX.ECS
             src.EntityCount--;
             if (srcChunk.Count == 0)
             {
-                src.ReleaseEmptyChunk(srcChunk);
+                src.RecycleEmptyChunk(srcChunk);
             }
 
             loc.Archetype = target;
@@ -320,36 +320,8 @@ namespace EngineX.ECS
             archetype.EntityCount--;
             if (chunk.Count == 0)
             {
-                archetype.ReleaseEmptyChunk(chunk);
+                archetype.RecycleEmptyChunk(chunk);
             }
-        }
-
-        private static int[] InsertSorted(int[] sorted, int value)
-        {
-            int index = Array.BinarySearch(sorted, value);
-            if (index >= 0)
-            {
-                return sorted;
-            }
-            index = ~index;
-            var result = new int[sorted.Length + 1];
-            Array.Copy(sorted, 0, result, 0, index);
-            result[index] = value;
-            Array.Copy(sorted, index, result, index + 1, sorted.Length - index);
-            return result;
-        }
-
-        private static int[] RemoveSorted(int[] sorted, int value)
-        {
-            int index = Array.BinarySearch(sorted, value);
-            if (index < 0)
-            {
-                return sorted;
-            }
-            var result = new int[sorted.Length - 1];
-            Array.Copy(sorted, 0, result, 0, index);
-            Array.Copy(sorted, index + 1, result, index, sorted.Length - index - 1);
-            return result;
         }
     }
 }
