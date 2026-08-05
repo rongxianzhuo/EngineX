@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DefineConstants>$(DefineConstants);ENGINEX_SAFETY_CHECKS</DefineConstants>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>EngineX.ECS.Tests</AssemblyName>
+    <RootNamespace>EngineX.ECS.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../../Baseline/**/*.cs" Link="EngineX/Baseline/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="../../Jobs/**/*.cs" Link="EngineX/Jobs/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="../../ECS/**/*.cs" Link="EngineX/ECS/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>
