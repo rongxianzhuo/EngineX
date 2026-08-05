@@ -1,3 +1,4 @@
 *.meta
-Tests/
 Demo/
+bin/
+obj/
