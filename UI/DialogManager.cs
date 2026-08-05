@@ -36,16 +36,15 @@ namespace EngineX.UI
 
         public static void Reset()
         {
-            if (_cache == null)
+            if (_cache != null)
             {
-                return;
+                foreach (IDialog dialog in _cache.Values)
+                {
+                    dialog?.Dispose();
+                }
+                _cache.Clear();
             }
-
-            foreach (IDialog dialog in _cache.Values)
-            {
-                dialog?.Dispose();
-            }
-            _cache.Clear();
+            _impl = null;
         }
     }
 }
