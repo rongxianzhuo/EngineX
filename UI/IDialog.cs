@@ -2,12 +2,9 @@ using System;
 
 namespace EngineX.UI
 {
-    public interface IDialog : IDisposable
+    public interface IDialog
     {
         T GetChild<T>(string name) where T : IUiElement;
-
-        IDialog GetChild(string name);
-
-        void SetVisible(bool visible);
+        void Close();
     }
 }
