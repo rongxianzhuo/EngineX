@@ -18,6 +18,8 @@ namespace EngineX.Physics
 
         public Aabb Bounds;
 
+        public BodyShape Shape;
+
         public BodyFlags Flags;
         public int Version;
         public int SleepTimer;
@@ -33,9 +35,43 @@ namespace EngineX.Physics
             Force = Vector3.Zero,
             Torque = Vector3.Zero,
             Bounds = Aabb.Empty,
+            Shape = BodyShape.Default,
             Flags = BodyFlags.Awake,
             Version = 1,
             SleepTimer = 0,
+        };
+    }
+
+    public enum ShapeType : byte
+    {
+        Sphere = 0,
+        Box = 1,
+        Capsule = 2,
+        ConvexHull = 3,
+    }
+
+    public struct BodyShape
+    {
+        public ShapeType Type;
+        public FP Radius;
+        public Vector3 HalfExtents;
+
+        public static BodyShape Default => new BodyShape
+        {
+            Type = ShapeType.Box,
+            HalfExtents = new Vector3(FP.Half, FP.Half, FP.Half),
+        };
+
+        public static BodyShape Sphere(FP radius) => new BodyShape
+        {
+            Type = ShapeType.Sphere,
+            Radius = radius,
+        };
+
+        public static BodyShape Box(Vector3 halfExtents) => new BodyShape
+        {
+            Type = ShapeType.Box,
+            HalfExtents = halfExtents,
         };
     }
 }
