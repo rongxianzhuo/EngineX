@@ -55,6 +55,76 @@ namespace EngineX.Physics.Tests
         }
 
         [Test]
+        public static void HundredBoxesSettle()
+        {
+            var world = new PhysicsWorld(256, new Vector3(FP.Zero, -FP.FromInt(2), FP.Zero));
+            world.FramesToSleep = 30;
+            world.VelocityIterations = 10;
+            world.PositionIterations = 1;
+
+            var ground = Body.Defaults;
+            ground.InverseMass = FP.Zero;
+            ground.Flags = BodyFlags.Static;
+            ground.Position = Vector3.Zero;
+            ground.Shape = BodyShape.Box(new Vector3(FP.FromInt(50), FP.FromFloat(0.5f), FP.FromInt(50)));
+            world.AddBody(ground);
+
+            int boxCount = 100;
+            var boxHandles = new BodyHandle[boxCount];
+            int perSide = 10;
+            for (int i = 0; i < boxCount; i++)
+            {
+                int r = i / perSide;
+                int c = i % perSide;
+                var box = Body.Defaults;
+                box.InverseMass = FP.One;
+                box.Position = new Vector3(
+                    FP.FromInt(c) - FP.FromFloat(4.5f),
+                    FP.FromInt(5) + FP.FromFloat(r) * FP.FromFloat(1.5f),
+                    FP.Zero);
+                box.Shape = BodyShape.Box(new Vector3(FP.Half, FP.Half, FP.Half));
+                boxHandles[i] = world.AddBody(box);
+            }
+
+            FP dt = FP.FromFloat(0.005f);
+            int steps = 1000;
+            for (int i = 0; i < steps; i++)
+            {
+                world.Step(dt);
+            }
+
+            int fellThrough = 0;
+            for (int i = 0; i < boxCount; i++)
+            {
+                if (!world.TryGetBody(boxHandles[i], out var body))
+                {
+                    fellThrough++;
+                    continue;
+                }
+                if (body.Position.Y < FP.FromFloat(-0.4f))
+                {
+                    fellThrough++;
+                }
+            }
+            TestRunner.Assert(fellThrough < 10,
+                $"fewer than 10 boxes should fall through, got {fellThrough}");
+
+            FP maxVel = FP.Zero;
+            int sleeping = 0;
+            for (int i = 0; i < boxCount; i++)
+            {
+                if (world.TryGetBody(boxHandles[i], out var body))
+                {
+                    FP v = body.LinearVelocity.Magnitude;
+                    if (v > maxVel) maxVel = v;
+                    if ((body.Flags & BodyFlags.Sleeping) != 0) sleeping++;
+                }
+            }
+            TestRunner.Assert(maxVel < FP.FromFloat(20f),
+                $"boxes should not explode, max velocity = {maxVel} (sleeping={sleeping}/{boxCount})");
+        }
+
+        [Test]
         public static void SingleBoxLandsOnGround()
         {
             var world = new PhysicsWorld(8, new Vector3(FP.Zero, -FP.FromInt(10), FP.Zero));

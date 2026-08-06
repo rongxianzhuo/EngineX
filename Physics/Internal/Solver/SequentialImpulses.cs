@@ -8,7 +8,7 @@ namespace EngineX.Physics.Internal.Solver
     internal static class SequentialImpulses
     {
         public const int DefaultVelocityIterations = 8;
-        public const int DefaultPositionIterations = 3;
+        public const int DefaultPositionIterations = 1;
         public static readonly FP Slop = FP.FromFloat(0.005f);
         public static readonly FP BaumgarteBeta = FP.FromFloat(0.2f);
         public static readonly FP RestitutionThreshold = FP.FromInt(1);
