@@ -111,5 +111,27 @@ namespace EngineX.Physics.Tests
             TestRunner.Assert(allocated < AllocationBudget,
                 $"Mixed dynamics allocated {allocated} bytes");
         }
+
+        [Test]
+        public static void PhysicsWorldStepIsZeroGc()
+        {
+            var world = new PhysicsWorld(64, Vector3.Zero);
+            var handles = new BodyHandle[16];
+            for (int i = 0; i < 16; i++)
+            {
+                var b = Body.Defaults;
+                b.InverseMass = FP.One;
+                b.Position = new Vector3(FP.FromInt(i), FP.Zero, FP.Zero);
+                handles[i] = world.AddBody(b);
+            }
+
+            for (int i = 0; i < 3; i++) world.Step(FP.FromFloat(0.01f));
+
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 100; i++) world.Step(FP.FromFloat(0.01f));
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            TestRunner.Assert(allocated < AllocationBudget * 4,
+                $"PhysicsWorld.Step allocated {allocated} bytes over 100 iterations");
+        }
     }
 }
