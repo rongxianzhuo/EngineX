@@ -14,6 +14,8 @@
 
   <ItemGroup>
     <Compile Include="../../Baseline/**/*.cs" Link="EngineX/Baseline/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="../../Jobs/**/*.cs" Link="EngineX/Jobs/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="../../ECS/**/*.cs" Link="EngineX/ECS/%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="../../Physics/**/*.cs" Link="EngineX/Physics/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 

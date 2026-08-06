@@ -85,6 +85,11 @@ namespace EngineX.Physics
             return _bodies.TryGet(h, out body);
         }
 
+        public void SetBody(BodyHandle h, in Body body)
+        {
+            _bodies.Set(h, body);
+        }
+
         public void Step(FP dt)
         {
             ApplyAndIntegrate(dt);
