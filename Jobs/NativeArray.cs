@@ -1,96 +1,78 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 namespace EngineX.Jobs
 {
-    public struct NativeArray<T> : IDisposable, IEquatable<NativeArray<T>>, IEnumerable<T> where T : struct
+    public readonly unsafe struct NativeArray<T> : IDisposable, IEnumerable<T> where T : unmanaged
     {
-        internal T[] Buffer;
-        internal int Offset;
-        internal int Length_;
-        internal Allocator Allocator;
+        public readonly int Length;
+        
+        private readonly IntPtr _ptr;
+        private readonly int _offset;
+        private readonly bool _view;
+        private readonly Allocator _allocator;
 
-        public NativeArray(int length, Allocator allocator)
-        {
-            if (length < 0) throw new ArgumentOutOfRangeException(nameof(length));
-            if (allocator == Allocator.Invalid) throw new ArgumentException("Allocator.Invalid not allowed", nameof(allocator));
-            Buffer = new T[length];
-            Offset = 0;
-            Length_ = length;
-            Allocator = allocator;
-        }
-
-        public int Length => Length_;
-
-        public bool IsCreated => Buffer != null;
+        private T* UnsafePointer => (T*)_ptr.ToPointer();
 
         public T this[int index]
         {
-            get
-            {
-                if ((uint)index >= (uint)Length_) throw new IndexOutOfRangeException();
-                return Buffer[Offset + index];
-            }
-            set
-            {
-                if ((uint)index >= (uint)Length_) throw new IndexOutOfRangeException();
-                Buffer[Offset + index] = value;
-            }
+            get => UnsafePointer[_offset + index];
+            set => UnsafePointer[_offset + index] = value;
+        }
+
+        public NativeArray(int length, Allocator allocator)
+        {
+            _ptr = Marshal.AllocHGlobal(sizeof(T) * length);
+            Length = length;
+            _offset = 0;
+            _allocator = allocator;
+            _view = false;
+        }
+
+        private NativeArray(IntPtr ptr, int length, int offset, Allocator allocator)
+        {
+            _ptr = ptr;
+            Length = length;
+            _offset = offset;
+            _allocator = allocator;
+            _view = true;
+        }
+
+        public NativeArray<T> GetView()
+        {
+            return new NativeArray<T>(_ptr, Length, 0, _allocator);
         }
 
         public NativeArray<T> GetSubArray(int start, int length)
         {
-            if (start < 0 || length < 0 || start + length > Length_) throw new ArgumentOutOfRangeException();
-            return new NativeArray<T>
-            {
-                Buffer = Buffer,
-                Offset = Offset + start,
-                Length_ = length,
-                Allocator = Allocator.None,
-            };
+            return new NativeArray<T>(_ptr, length, start, _allocator);
+        }
+
+        public ref T GetRef(int index)
+        {
+            return ref UnsafePointer[index];
         }
 
         public T[] ToArray()
         {
-            if (Length_ == 0) return Array.Empty<T>();
-            var result = new T[Length_];
-            Array.Copy(Buffer, Offset, result, 0, Length_);
+            if (Length == 0) return Array.Empty<T>();
+            var result = new T[Length];
+            for (var i = 0; i < Length; i++) result[i] = this[i];
             return result;
         }
 
         public void Dispose()
         {
-            if (Buffer != null && (Allocator == Allocator.Persistent || Allocator == Allocator.TempJob))
-            {
-                Buffer = null;
-                Offset = 0;
-                Length_ = 0;
-                Allocator = Allocator.Invalid;
-            }
-        }
-
-        public bool Equals(NativeArray<T> other)
-        {
-            return ReferenceEquals(Buffer, other.Buffer) && Offset == other.Offset && Length_ == other.Length_;
-        }
-
-        public override bool Equals(object obj)
-        {
-            return obj is NativeArray<T> other && Equals(other);
-        }
-
-        public override int GetHashCode()
-        {
-            return HashCode.Combine(
-                System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(Buffer ?? Array.Empty<T>()),
-                Offset,
-                Length_);
+            if (_view) return;
+            Marshal.FreeHGlobal(_ptr);
         }
 
         public Enumerator GetEnumerator() => new Enumerator(this);
 
         IEnumerator<T> IEnumerable<T>.GetEnumerator() => GetEnumerator();
+        
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         public struct Enumerator : IEnumerator<T>
@@ -113,7 +95,7 @@ namespace EngineX.Jobs
             public bool MoveNext()
             {
                 _index++;
-                return _index < _array.Length_;
+                return _index < _array.Length;
             }
 
             public void Reset()
