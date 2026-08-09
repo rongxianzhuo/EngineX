@@ -143,7 +143,7 @@ namespace EngineX.ECS
             return creator(capacity, allocator);
         }
 
-        private static IComponentArray CreateTyped<T>(int capacity, Allocator allocator) where T : struct, IComponentData
+        private static IComponentArray CreateTyped<T>(int capacity, Allocator allocator) where T : unmanaged, IComponentData
         {
             return new ComponentArray<T>(capacity, allocator);
         }

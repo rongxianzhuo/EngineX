@@ -144,7 +144,7 @@ namespace EngineX.ECS
             return applier;
         }
 
-        private static void ApplyAdd<T>(EntityCommandBuffer ecb, World world, Entity entity, int valueIndex) where T : struct, IComponentData
+        private static void ApplyAdd<T>(EntityCommandBuffer ecb, World world, Entity entity, int valueIndex) where T : unmanaged, IComponentData
         {
             var store = (ComponentValueStore<T>)ecb._stores[ComponentType<T>.Index];
             world.AddComponent(entity, store.Get(valueIndex));

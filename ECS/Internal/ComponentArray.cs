@@ -12,7 +12,7 @@ namespace EngineX.ECS
         void Dispose();
     }
 
-    internal sealed class ComponentArray<T> : IComponentArray where T : struct, IComponentData
+    internal sealed class ComponentArray<T> : IComponentArray where T : unmanaged, IComponentData
     {
         private NativeArray<T> _data;
 
@@ -23,49 +23,37 @@ namespace EngineX.ECS
 
         public NativeArray<T> Data => _data;
 
-        public NativeArray<T> GetView()
-        {
-            return new NativeArray<T>
-            {
-                Buffer = _data.Buffer,
-                Offset = _data.Offset,
-                Length_ = _data.Length_,
-                Allocator = Allocator.None,
-            };
-        }
+        public NativeArray<T> GetView() => _data.GetView();
 
         public ref T GetRef(int index)
         {
-            return ref _data.Buffer[_data.Offset + index];
+            return ref _data.GetRef(index);
         }
 
         public T Get(int index)
         {
-            return _data[_data.Offset + index];
+            return _data[index];
         }
 
         public void Set(int index, T value)
         {
-            _data[_data.Offset + index] = value;
+            _data[index] = value;
         }
 
         public void SetDefault(int index)
         {
-            _data[_data.Offset + index] = default;
+            _data[index] = default;
         }
 
         public void CopyTo(int source, IComponentArray target, int targetIndex)
         {
             var typed = (ComponentArray<T>)target;
-            typed._data[typed._data.Offset + targetIndex] = _data[_data.Offset + source];
+            typed._data[targetIndex] = _data[source];
         }
 
         public void Dispose()
         {
-            if (_data.IsCreated)
-            {
-                _data.Dispose();
-            }
+            _data.Dispose();
         }
     }
 
