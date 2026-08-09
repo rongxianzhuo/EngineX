@@ -16,6 +16,11 @@ namespace EngineX.UI
             return _impl?.Show(name);
         }
 
+        public static void Close(string name)
+        {
+            _impl?.Close(name);
+        }
+
         public static void Unregister()
         {
             _impl = null;
