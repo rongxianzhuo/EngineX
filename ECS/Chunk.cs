@@ -87,31 +87,4 @@ namespace EngineX.ECS
             Count = 0;
         }
     }
-
-    public readonly struct ChunkHandle
-    {
-        public readonly Chunk Chunk;
-
-        internal ChunkHandle(Chunk chunk)
-        {
-            Chunk = chunk;
-        }
-
-        public int Count => Chunk.Count;
-
-        public ref Entity GetEntityRef(int index)
-        {
-            return ref Chunk.GetEntityRef(index);
-        }
-
-        public ref T GetComponentRef<T>(int indexInChunk) where T : unmanaged, IComponentData
-        {
-            return ref Chunk.GetComponentRef<T>(indexInChunk);
-        }
-
-        public NativeArray<T> GetComponentNativeArray<T>() where T : unmanaged, IComponentData
-        {
-            return Chunk.GetComponentNativeArray<T>();
-        }
-    }
 }

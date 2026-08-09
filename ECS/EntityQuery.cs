@@ -210,7 +210,7 @@ namespace EngineX.ECS
             }
         }
 
-        public void ToChunkArray(ChunkHandle[] reuse)
+        public void ToChunkArray(Chunk[] reuse)
         {
             int count = CalculateChunkCount();
             if (reuse.Length < count)
@@ -227,7 +227,7 @@ namespace EngineX.ECS
                 if (!Matches(archetype)) continue;
                 for (int c = 0; c < archetype.Chunks.Count; c++)
                 {
-                    reuse[k++] = new ChunkHandle(archetype.Chunks[c]);
+                    reuse[k++] = archetype.Chunks[c];
                 }
             }
         }
