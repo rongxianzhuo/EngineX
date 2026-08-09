@@ -83,7 +83,7 @@ namespace EngineX.ECS
             return _locations[entity.Index].Archetype.HasComponent(typeIndex);
         }
 
-        public T GetComponent<T>(Entity entity) where T : struct, IComponentData
+        public T GetComponent<T>(Entity entity) where T : unmanaged, IComponentData
         {
             ref var loc = ref _locations[entity.Index];
             if (!IsAlive(entity, loc))
@@ -98,7 +98,7 @@ namespace EngineX.ECS
             return loc.Chunk.GetComponentRef<T>(loc.IndexInChunk);
         }
 
-        public void SetComponent<T>(Entity entity, T data) where T : struct, IComponentData
+        public void SetComponent<T>(Entity entity, T data) where T : unmanaged, IComponentData
         {
             ref var loc = ref _locations[entity.Index];
             if (!IsAlive(entity, loc))
@@ -113,7 +113,7 @@ namespace EngineX.ECS
             loc.Chunk.GetComponentRef<T>(loc.IndexInChunk) = data;
         }
 
-        public void AddComponent<T>(Entity entity, T data = default) where T : struct, IComponentData
+        public void AddComponent<T>(Entity entity, T data = default) where T : unmanaged, IComponentData
         {
             ref var loc = ref _locations[entity.Index];
             if (!IsAlive(entity, loc))

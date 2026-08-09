@@ -14,12 +14,17 @@ namespace EngineX.ECS
         void Execute(ref T0 c0, ref T1 c1);
     }
 
-    public interface IForEach<T0, T1, T2> where T0 : struct, IComponentData where T1 : struct, IComponentData where T2 : struct, IComponentData
+    public interface IForEach<T0, T1, T2> where T0 : struct, IComponentData
+        where T1 : struct, IComponentData
+        where T2 : struct, IComponentData
     {
         void Execute(ref T0 c0, ref T1 c1, ref T2 c2);
     }
 
-    public interface IForEach<T0, T1, T2, T3> where T0 : struct, IComponentData where T1 : struct, IComponentData where T2 : struct, IComponentData where T3 : struct, IComponentData
+    public interface IForEach<T0, T1, T2, T3> where T0 : struct, IComponentData
+        where T1 : struct, IComponentData
+        where T2 : struct, IComponentData
+        where T3 : struct, IComponentData
     {
         void Execute(ref T0 c0, ref T1 c1, ref T2 c2, ref T3 c3);
     }
@@ -54,7 +59,9 @@ namespace EngineX.ECS
             return this;
         }
 
-        public QueryBuilder WithAll<T0, T1, T2>() where T0 : struct, IComponentData where T1 : struct, IComponentData where T2 : struct, IComponentData
+        public QueryBuilder WithAll<T0, T1, T2>() where T0 : struct, IComponentData
+            where T1 : struct, IComponentData
+            where T2 : struct, IComponentData
         {
             _all.Add(ComponentType<T0>.Index);
             _all.Add(ComponentType<T1>.Index);
@@ -62,7 +69,10 @@ namespace EngineX.ECS
             return this;
         }
 
-        public QueryBuilder WithAll<T0, T1, T2, T3>() where T0 : struct, IComponentData where T1 : struct, IComponentData where T2 : struct, IComponentData where T3 : struct, IComponentData
+        public QueryBuilder WithAll<T0, T1, T2, T3>() where T0 : struct, IComponentData
+            where T1 : struct, IComponentData
+            where T2 : struct, IComponentData
+            where T3 : struct, IComponentData
         {
             _all.Add(ComponentType<T0>.Index);
             _all.Add(ComponentType<T1>.Index);
@@ -71,7 +81,11 @@ namespace EngineX.ECS
             return this;
         }
 
-        public QueryBuilder WithAll<T0, T1, T2, T3, T4>() where T0 : struct, IComponentData where T1 : struct, IComponentData where T2 : struct, IComponentData where T3 : struct, IComponentData where T4 : struct, IComponentData
+        public QueryBuilder WithAll<T0, T1, T2, T3, T4>() where T0 : struct, IComponentData
+            where T1 : struct, IComponentData
+            where T2 : struct, IComponentData
+            where T3 : struct, IComponentData
+            where T4 : struct, IComponentData
         {
             _all.Add(ComponentType<T0>.Index);
             _all.Add(ComponentType<T1>.Index);
@@ -141,6 +155,7 @@ namespace EngineX.ECS
                     count += archetypes[i].EntityCount;
                 }
             }
+
             return count;
         }
 
@@ -156,16 +171,19 @@ namespace EngineX.ECS
                     count += archetype.Chunks.Count;
                 }
             }
+
             return count;
         }
 
-        public void CopyFromComponentDataArray<T>(NativeArray<T> data) where T : struct, IComponentData
+        public void CopyFromComponentDataArray<T>(NativeArray<T> data) where T : unmanaged, IComponentData
         {
             int count = CalculateEntityCount();
             if (data.Length != count)
             {
-                throw new ArgumentException($"NativeArray length {data.Length} does not match query entity count {count}", nameof(data));
+                throw new ArgumentException(
+                    $"NativeArray length {data.Length} does not match query entity count {count}", nameof(data));
             }
+
             int typeIndex = ComponentType<T>.Index;
             int k = 0;
             var archetypes = _world.Archetypes;
@@ -175,8 +193,10 @@ namespace EngineX.ECS
                 if (!Matches(archetype)) continue;
                 if (!archetype.HasComponent(typeIndex))
                 {
-                    throw new ArgumentException($"Query does not include component {typeof(T).Name} in WithAll", nameof(T));
+                    throw new ArgumentException($"Query does not include component {typeof(T).Name} in WithAll",
+                        nameof(T));
                 }
+
                 int componentIndex = archetype.GetComponentIndex(typeIndex);
                 for (int c = 0; c < archetype.Chunks.Count; c++)
                 {
@@ -190,13 +210,15 @@ namespace EngineX.ECS
             }
         }
 
-        public void ToChunkArray(NativeArray<ChunkHandle> reuse)
+        public void ToChunkArray(ChunkHandle[] reuse)
         {
             int count = CalculateChunkCount();
             if (reuse.Length < count)
             {
-                throw new ArgumentException($"NativeArray length {reuse.Length} is smaller than required chunk count {count}", nameof(reuse));
+                throw new ArgumentException(
+                    $"NativeArray length {reuse.Length} is smaller than required chunk count {count}", nameof(reuse));
             }
+
             int k = 0;
             var archetypes = _world.Archetypes;
             for (int i = 0; i < archetypes.Count; i++)
@@ -210,7 +232,8 @@ namespace EngineX.ECS
             }
         }
 
-        public void ForEach<TVisitor, T0>(ref TVisitor visitor) where TVisitor : struct, IForEach<T0> where T0 : struct, IComponentData
+        public void ForEach<TVisitor, T0>(ref TVisitor visitor) where TVisitor : struct, IForEach<T0>
+            where T0 : unmanaged, IComponentData
         {
             int typeIndex = ComponentType<T0>.Index;
             var archetypes = _world.Archetypes;
@@ -231,7 +254,9 @@ namespace EngineX.ECS
             }
         }
 
-        public void ForEach<TVisitor, T0, T1>(ref TVisitor visitor) where TVisitor : struct, IForEach<T0, T1> where T0 : struct, IComponentData where T1 : struct, IComponentData
+        public void ForEach<TVisitor, T0, T1>(ref TVisitor visitor) where TVisitor : struct, IForEach<T0, T1>
+            where T0 : unmanaged, IComponentData
+            where T1 : unmanaged, IComponentData
         {
             int typeIndex0 = ComponentType<T0>.Index;
             int typeIndex1 = ComponentType<T1>.Index;
@@ -255,7 +280,10 @@ namespace EngineX.ECS
             }
         }
 
-        public void ForEach<TVisitor, T0, T1, T2>(ref TVisitor visitor) where TVisitor : struct, IForEach<T0, T1, T2> where T0 : struct, IComponentData where T1 : struct, IComponentData where T2 : struct, IComponentData
+        public void ForEach<TVisitor, T0, T1, T2>(ref TVisitor visitor) where TVisitor : struct, IForEach<T0, T1, T2>
+            where T0 : unmanaged, IComponentData
+            where T1 : unmanaged, IComponentData
+            where T2 : unmanaged, IComponentData
         {
             int typeIndex0 = ComponentType<T0>.Index;
             int typeIndex1 = ComponentType<T1>.Index;
@@ -282,7 +310,12 @@ namespace EngineX.ECS
             }
         }
 
-        public void ForEach<TVisitor, T0, T1, T2, T3>(ref TVisitor visitor) where TVisitor : struct, IForEach<T0, T1, T2, T3> where T0 : struct, IComponentData where T1 : struct, IComponentData where T2 : struct, IComponentData where T3 : struct, IComponentData
+        public void ForEach<TVisitor, T0, T1, T2, T3>(ref TVisitor visitor)
+            where TVisitor : struct, IForEach<T0, T1, T2, T3>
+            where T0 : unmanaged, IComponentData
+            where T1 : unmanaged, IComponentData
+            where T2 : unmanaged, IComponentData
+            where T3 : unmanaged, IComponentData
         {
             int typeIndex0 = ComponentType<T0>.Index;
             int typeIndex1 = ComponentType<T1>.Index;
@@ -306,7 +339,8 @@ namespace EngineX.ECS
                     var array3 = chunk.GetComponentArray<T3>(componentIndex3);
                     for (int e = 0; e < chunk.Count; e++)
                     {
-                        visitor.Execute(ref array0.GetRef(e), ref array1.GetRef(e), ref array2.GetRef(e), ref array3.GetRef(e));
+                        visitor.Execute(ref array0.GetRef(e), ref array1.GetRef(e), ref array2.GetRef(e),
+                            ref array3.GetRef(e));
                     }
                 }
             }
@@ -335,6 +369,7 @@ namespace EngineX.ECS
                     return false;
                 }
             }
+
             for (int i = 0; i < _none.Length; i++)
             {
                 if (archetype.HasComponent(_none[i]))
@@ -342,6 +377,7 @@ namespace EngineX.ECS
                     return false;
                 }
             }
+
             if (_any.Length > 0)
             {
                 bool any = false;
@@ -353,11 +389,13 @@ namespace EngineX.ECS
                         break;
                     }
                 }
+
                 if (!any)
                 {
                     return false;
                 }
             }
+
             return true;
         }
     }

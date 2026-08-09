@@ -36,22 +36,22 @@ namespace EngineX.ECS
 
         public ref Entity GetEntityRef(int index)
         {
-            return ref _entities.Buffer[_entities.Offset + index];
+            return ref _entities.GetRef(index);
         }
 
-        internal ComponentArray<T> GetComponentArray<T>(int componentIndex) where T : struct, IComponentData
+        internal ComponentArray<T> GetComponentArray<T>(int componentIndex) where T : unmanaged, IComponentData
         {
             return (ComponentArray<T>)_components[componentIndex];
         }
 
-        public ref T GetComponentRef<T>(int indexInChunk) where T : struct, IComponentData
+        public ref T GetComponentRef<T>(int indexInChunk) where T : unmanaged, IComponentData
         {
             int componentIndex = Archetype.GetComponentIndex(ComponentType<T>.Index);
             var array = (ComponentArray<T>)_components[componentIndex];
             return ref array.GetRef(indexInChunk);
         }
 
-        public NativeArray<T> GetComponentNativeArray<T>() where T : struct, IComponentData
+        public NativeArray<T> GetComponentNativeArray<T>() where T : unmanaged, IComponentData
         {
             int componentIndex = Archetype.GetComponentIndex(ComponentType<T>.Index);
             var array = (ComponentArray<T>)_components[componentIndex];
@@ -78,10 +78,7 @@ namespace EngineX.ECS
 
         internal void Dispose()
         {
-            if (_entities.IsCreated)
-            {
-                _entities.Dispose();
-            }
+            _entities.Dispose();
             for (int i = 0; i < _components.Length; i++)
             {
                 _components[i].Dispose();
@@ -107,12 +104,12 @@ namespace EngineX.ECS
             return ref Chunk.GetEntityRef(index);
         }
 
-        public ref T GetComponentRef<T>(int indexInChunk) where T : struct, IComponentData
+        public ref T GetComponentRef<T>(int indexInChunk) where T : unmanaged, IComponentData
         {
             return ref Chunk.GetComponentRef<T>(indexInChunk);
         }
 
-        public NativeArray<T> GetComponentNativeArray<T>() where T : struct, IComponentData
+        public NativeArray<T> GetComponentNativeArray<T>() where T : unmanaged, IComponentData
         {
             return Chunk.GetComponentNativeArray<T>();
         }

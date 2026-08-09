@@ -49,19 +49,17 @@ namespace EngineX.Jobs
 
         public static JobHandle ScheduleParallel<TJob, TArray>(TJob job, NativeArray<TArray> array, int innerLoopBatchCount = 1, JobHandle dependsOn = default)
             where TJob : struct, IJobParallelForBatch
-            where TArray : struct
+            where TArray : unmanaged
         {
             if (innerLoopBatchCount < 1) innerLoopBatchCount = 1;
-            if (!array.IsCreated) throw new ArgumentException("NativeArray is not allocated", nameof(array));
             return EngineX.Jobs.Internal.JobScheduler.ScheduleParallelForBatch(job, array.Length, innerLoopBatchCount, dependsOn);
         }
 
         public static JobHandle ScheduleParallel<TArray>(IJobParallelForBatch job, NativeArray<TArray> array, int innerLoopBatchCount = 1, JobHandle dependsOn = default)
-            where TArray : struct
+            where TArray : unmanaged
         {
             if (job == null) throw new ArgumentNullException(nameof(job));
             if (innerLoopBatchCount < 1) innerLoopBatchCount = 1;
-            if (!array.IsCreated) throw new ArgumentException("NativeArray is not allocated", nameof(array));
             return EngineX.Jobs.Internal.JobScheduler.ScheduleParallelForBatch(job.Execute, array.Length, innerLoopBatchCount, dependsOn);
         }
     }
