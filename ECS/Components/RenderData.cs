@@ -2,14 +2,14 @@ namespace EngineX.ECS.Components
 {
     public struct RenderData : IComponentData
     {
-        public string MeshPath;
+        public long MeshAssetId;
 
-        public string MaterialPath;
+        public long MaterialAssetId;
 
-        public RenderData(string meshPath, string materialPath)
+        public RenderData(long meshAssetId, long materialAssetId)
         {
-            MeshPath = meshPath;
-            MaterialPath = materialPath;
+            MeshAssetId = meshAssetId;
+            MaterialAssetId = materialAssetId;
         }
     }
 }
